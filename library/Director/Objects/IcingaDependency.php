@@ -628,7 +628,7 @@ class IcingaDependency extends IcingaObject implements ExportInterface
         // handle special case for plain string parent service on Dependency
         // Apply rules
         if ($related === null && $key === 'parent_service'
-            && (null !== $this->get('parent_service_by_name') 
+            && (null !== $this->get('parent_service_by_name')
                 && !$this->isServiceCustomVar($this->get('parent_service_by_name'))
             )
         ) {

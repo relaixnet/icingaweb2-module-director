@@ -222,7 +222,8 @@ class IcingaDependencyForm extends DirectorObjectForm
                     'label' => $this->translate('Parent Service'),
                     'description' => $this->translate(
                         'Optional. The parent service. If omitted this dependency'
-                         . ' object is treated as host dependency.'
+                        . ' object is treated as host dependency. You might want to refer'
+                        . ' Service Custom Variables via $service.vars.varname$'
                     ),
                     'class' => "autosubmit director-suggest",
                     'data-suggestion-context' => 'servicenames',
