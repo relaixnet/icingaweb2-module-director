@@ -212,6 +212,12 @@ class IcingaDependencyForm extends DirectorObjectForm
 
         if (!empty($sentParent) || $dependency->isApplyRule()) {
             $parentService = $dependency->get('parent_service');
+            if ($parentService === null) {
+                $parentServiceVar = $dependency->get('parent_service_by_name');
+                if (\strlen($parentServiceVar) > 0) {
+                    $parentService = '$' . $dependency->get('parent_service_by_name') . '$';
+                }
+            }
             $this->addElement('text', 'parent_service', [
                     'label' => $this->translate('Parent Service'),
                     'description' => $this->translate(
@@ -296,6 +302,12 @@ class IcingaDependencyForm extends DirectorObjectForm
                 $values['parent_host_var'] = \trim($values['parent_host'], '$');
                 $values['parent_host'] = '';
             }
+            if (isset($values['parent_service'])
+                && $this->isCustomVar($values['parent_service'])
+            ) {
+                $values['parent_service_by_name'] = \trim($values['parent_service'], '$');
+                $values['parent_service'] = '';
+            }
         }
 
         parent::handleProperties($object, $values);
@@ -303,7 +315,7 @@ class IcingaDependencyForm extends DirectorObjectForm
 
     protected function isCustomVar($string)
     {
-        return \preg_match('/^\$(?:host)\.vars\..+\$$/', $string);
+        return \preg_match('/^\$(?:host|service)\.vars\..+\$$/', $string);
         // Eventually: return \preg_match('/^\$(?:host|service)\.vars\..+\$$/', $string);
     }
 }
