@@ -23,7 +23,7 @@ class ObjectsTableService extends ObjectsTable
         return [
             'object_name'      => 'o.object_name',
             'disabled'         => 'o.disabled',
-            'host'             => 'h.object_name',
+            'host_set'         => 'CASE WHEN o.service_set_id IS NULL THEN h.object_name ELSE os.object_name END',
             'host_object_type' => 'h.object_type',
             'host_disabled'    => 'h.disabled',
             'id'               => 'o.id',
@@ -43,7 +43,7 @@ class ObjectsTableService extends ObjectsTable
     public function getColumnsToBeRendered()
     {
         return [
-            'host'        => 'Host',
+            'host_set'        => 'Host | Service Set',
             'object_name' => 'Service Name'
         ];
     }
@@ -52,16 +52,16 @@ class ObjectsTableService extends ObjectsTable
     {
         $url = Url::fromPath('director/service/edit', [
             'name' => $row->object_name,
-            'host' => $row->host,
+            'host_set' => $row->host_set,
             'id'   => $row->id,
         ]);
 
-        $caption = $row->host === null
+        $caption = $row->host_set === null
             ? Html::tag('span', ['class' => 'error'], '- none -')
-            : $row->host;
+            : $row->host_set;
 
         $hostField = static::td(Link::create($caption, $url));
-        if ($row->host === null) {
+        if ($row->host_set === null) {
             $hostField->getAttributes()->add('class', 'error');
         }
         $tr = static::tr([
@@ -90,7 +90,10 @@ class ObjectsTableService extends ObjectsTable
             ['hsb' => 'icinga_host_service_blacklist'],
             'hsb.service_id = o.id AND hsb.host_id = o.host_id',
             []
-        )->where('o.service_set_id IS NULL')
-            ->order('o.object_name')->order('h.object_name');
+        )->joinLeft(
+            ['os' => 'icinga_service_set'],
+            'os.id = o.service_set_id',
+            []
+        )->order('o.object_name')->order('h.object_name');
     }
 }
