@@ -5,12 +5,16 @@ namespace Icinga\Module\Director\Forms;
 use Icinga\Exception\NotFoundError;
 use Icinga\Exception\NotImplementedError;
 use Icinga\Module\Director\Objects\IcingaObject;
+use Icinga\Module\Director\Objects\IcingaService;
 use Icinga\Module\Director\Web\Form\DirectorForm;
 
 class RestoreObjectForm extends DirectorForm
 {
     /** @var IcingaObject */
     protected $object;
+
+    /** @var IcingaService[] */
+    protected $servicesForServiceSet;
 
     public function setup()
     {
@@ -19,7 +23,35 @@ class RestoreObjectForm extends DirectorForm
 
     public function onSuccess()
     {
-        $object = $this->object;
+        $msg = $this->restore($this->object);
+
+        $this->redirectOnSuccess($msg);
+    }
+
+    public function setObject(IcingaObject $object)
+    {
+        $this->object = $object;
+        return $this;
+    }
+
+    /**
+     * @param IcingaService[] $services
+     * @return $this
+     */
+    public function setServicesForServiceSet($services)
+    {
+        $this->servicesForServiceSet = $services;
+        return $this;
+    }
+
+
+    protected function getServicesForServiceSet()
+    {
+        return $this->servicesForServiceSet;
+    }
+
+    protected function restore($object)
+    {
         $name = $object->getObjectName();
         $db = $this->db;
 
@@ -79,14 +111,13 @@ class RestoreObjectForm extends DirectorForm
         } else {
             $msg = $this->translate('Object has been re-created');
             $object->store($db);
+            if ($object->getTableName() === 'icinga_service_set') {
+                foreach ($this->getServicesForServiceSet() as $service) {
+                    $this->restore($service);
+                }
+            }
         }
 
-        $this->redirectOnSuccess($msg);
-    }
-
-    public function setObject(IcingaObject $object)
-    {
-        $this->object = $object;
-        return $this;
+        return $msg;
     }
 }

@@ -287,6 +287,32 @@ class Db extends DbConnection
         return $db->fetchRow($query);
     }
 
+    public function fetchActivitylogEntryPrev($id, $type = null, $name = null)
+    {
+        $db = $this->db();
+        $prev = $db->select()->from('director_activity_log', ['id' => 'MAX(id)'])
+            ->where('id < ?', (int) $id);
+
+
+        if ($type !== null) {
+            $prev->where('object_type = ?', $type);
+        }
+
+        if ($name !== null) {
+            $prev->where('object_name = ?', $name);
+        }
+
+        $query = $db->select()->from(
+            array('dal' => 'director_activity_log')
+        )->join(
+            array('prev' => $prev),
+            'dal.id = prev.id',
+            array()
+        );
+
+        return $db->fetchRow($query);
+    }
+
     public function fetchActivityLogEntryById($id)
     {
         $sql = 'SELECT id, object_type, object_name, action_name,'

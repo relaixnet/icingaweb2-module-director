@@ -162,9 +162,26 @@ class ActivityLogInfo extends HtmlDocument
      */
     protected function getRestoreForm()
     {
+        $object = $this->oldObject();
+        if ($this->entry->object_type === 'icinga_service_set' && $this->entry->action_name === 'delete') {
+            $servicesForServiceSet = [];
+            foreach ($this->getServicesForServiceSet() as $serviceEntries) {
+                $servicesForServiceSet[] = $this->createObject(
+                    $serviceEntries->object_type,
+                    $serviceEntries->old_properties
+                );
+            }
+
+            return RestoreObjectForm::load()
+                ->setDb($this->db)
+                ->setObject($object)
+                ->setServicesForServiceSet($servicesForServiceSet)
+                ->handleRequest();
+        }
+
         return RestoreObjectForm::load()
             ->setDb($this->db)
-            ->setObject($this->oldObject())
+            ->setObject($object)
             ->handleRequest();
     }
 
@@ -605,5 +622,39 @@ class ActivityLogInfo extends HtmlDocument
             $newProps,
             $this->db
         )->setProperties((array) $props);
+    }
+
+    protected function getServicesForServiceSet()
+    {
+        $currentId = $this->entry->id;
+        $prevServiceSet = $this->db->fetchActivitylogEntryPrev(
+            $currentId,
+            $this->entry->object_type,
+            $this->entry->object_name
+        );
+
+        if ($prevServiceSet) {
+            $joinQuery = $this->db->getDbAdapter()
+                ->select()
+                ->from('director_activity_log',
+                    ['id', 'object_name', 'service_set' => "JSON_EXTRACT(director_activity_log.old_properties, '$.service_set')"])
+                ->where('id < ?', (int) $currentId)
+                ->where('id > ?', (int) $prevServiceSet->id)
+                ->where("JSON_EXTRACT(director_activity_log.old_properties, '$.service_set') IS NOT NULL");
+        } else {
+            $joinQuery = $this->db->getDbAdapter()
+                ->select()
+                ->from('director_activity_log',
+                    ['id', 'object_name', 'service_set' => "JSON_EXTRACT(director_activity_log.old_properties, '$.service_set')"])
+                ->where('id < ?', (int) $currentId)
+                ->where("JSON_EXTRACT(director_activity_log.old_properties, '$.service_set') IS NOT NULL");
+        }
+
+        $query = $this->db->getDbAdapter()
+            ->select()
+            ->from(['dal' => 'director_activity_log'])
+            ->join(['sdal' => $joinQuery], 'sdal.id=dal.id', []);
+
+        return $this->db->getDbAdapter()->fetchAll($query);
     }
 }
